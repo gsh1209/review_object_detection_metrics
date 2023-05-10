@@ -3,7 +3,7 @@ import os
 import src.utils.converter as converter
 import src.utils.general_utils as general_utils
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QButtonGroup
 from src.evaluators.coco_evaluator import get_coco_summary
 from src.evaluators.pascal_voc_evaluator import (get_pascalvoc_metrics, plot_precision_recall_curve,
                                                  plot_precision_recall_curves)
@@ -18,6 +18,28 @@ class Main_Dialog(QMainWindow, Main_UI):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
+        # set layout
+        self.setFixedSize(self.width(), self.height())
+        self.widget.setContentsMargins(10, 10, 10, 10)
+        self.groundtruth_group = QButtonGroup(self)
+        self.groundtruth_group.addButton(self.rad_gt_format_coco_json)
+        self.groundtruth_group.addButton(self.rad_gt_format_openimages_csv)
+        self.groundtruth_group.addButton(self.rad_gt_format_imagenet_xml)
+        self.groundtruth_group.addButton(self.rad_gt_format_abs_values_text)
+        self.groundtruth_group.addButton(self.rad_gt_format_cvat_xml)
+        self.groundtruth_group.addButton(self.rad_gt_format_pascalvoc_xml)
+        self.groundtruth_group.addButton(self.rad_gt_format_labelme_xml)
+        self.groundtruth_group.addButton(self.rad_gt_format_yolo_text)
+
+        self.detection_group = QButtonGroup(self)
+        self.detection_group.addButton(self.rad_det_ci_format_text_yolo_rel)
+        self.detection_group.addButton(self.rad_det_cn_format_text_yolo_rel)
+        self.detection_group.addButton(self.rad_det_ci_format_text_xyx2y2_abs)
+        self.detection_group.addButton(self.rad_det_cn_format_text_xyx2y2_abs)
+        self.detection_group.addButton(self.rad_det_ci_format_text_xywh_abs)
+        self.detection_group.addButton(self.rad_det_cn_format_text_xywh_abs)
+        self.detection_group.addButton(self.rad_det_format_coco_json)
+
         self.current_directory = os.path.dirname(os.path.realpath(__file__))
         # Define error msg dialog
         self.msgBox = QMessageBox()
@@ -34,6 +56,10 @@ class Main_Dialog(QMainWindow, Main_UI):
         self.filepath_classes_det = None
         self.dir_save_results = None
 
+        # more default values
+        self.rad_gt_format_pascalvoc_xml.setChecked(True)
+        self.rad_det_cn_format_text_xyx2y2_abs.setChecked(True)
+
         self.center_screen()
 
     def center_screen(self):
@@ -43,15 +69,15 @@ class Main_Dialog(QMainWindow, Main_UI):
         left = (desktopSize.width() / 2) - (size.width() / 2)
         self.move(left, top)
 
-    def closeEvent(self, event):
-        conf = self.show_popup('Are you sure you want to close the program?',
-                               'Closing',
-                               buttons=QMessageBox.Yes | QMessageBox.No,
-                               icon=QMessageBox.Question)
-        if conf == QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()
+    # def closeEvent(self, event):
+    #     conf = self.show_popup('Are you sure you want to close the program?',
+    #                            'Closing',
+    #                            buttons=QMessageBox.Yes | QMessageBox.No,
+    #                            icon=QMessageBox.Question)
+    #     if conf == QMessageBox.Yes:
+    #         event.accept()
+    #     else:
+    #         event.ignore()
 
     def show_popup(self,
                    message,
@@ -80,7 +106,8 @@ class Main_Dialog(QMainWindow, Main_UI):
         elif self.rad_gt_format_imagenet_xml.isChecked():
             ret = converter.imagenet2bb(self.dir_annotations_gt)
         elif self.rad_gt_format_abs_values_text.isChecked():
-            ret = converter.text2bb(self.dir_annotations_gt, bb_type=BBType.GROUND_TRUTH)
+            ret = converter.text2bb(
+                self.dir_annotations_gt, bb_type=BBType.GROUND_TRUTH)
         elif self.rad_gt_format_yolo_text.isChecked():
             ret = converter.yolo2bb(self.dir_annotations_gt,
                                     self.dir_images_gt,
@@ -115,7 +142,8 @@ class Main_Dialog(QMainWindow, Main_UI):
             # Verify if text file with classes was provided
             valid_txt_file = False
             if self.filepath_classes_det is not None and os.path.isfile(self.filepath_classes_det):
-                classes = general_utils.get_classes_from_txt_file(self.filepath_classes_det)
+                classes = general_utils.get_classes_from_txt_file(
+                    self.filepath_classes_det)
                 if len(classes) != 0:
                     valid_txt_file = True
             if valid_txt_file is False:
@@ -168,7 +196,8 @@ class Main_Dialog(QMainWindow, Main_UI):
         if self.rad_det_ci_format_text_yolo_rel.isChecked(
         ) or self.rad_det_ci_format_text_xyx2y2_abs.isChecked(
         ) or self.rad_det_ci_format_text_xywh_abs.isChecked():
-            ret = general_utils.replace_id_with_classes(ret, self.filepath_classes_det)
+            ret = general_utils.replace_id_with_classes(
+                ret, self.filepath_classes_det)
         return ret, True
 
     def btn_gt_statistics_clicked(self):
@@ -257,7 +286,8 @@ class Main_Dialog(QMainWindow, Main_UI):
             txt = self.current_directory
         else:
             txt = self.txb_det_dir.text()
-        directory = QFileDialog.getExistingDirectory(self, 'Choose directory with detections', txt)
+        directory = QFileDialog.getExistingDirectory(
+            self, 'Choose directory with detections', txt)
         if directory == '':
             return
         if os.path.isdir(directory):
@@ -391,4 +421,5 @@ class Main_Dialog(QMainWindow, Main_UI):
                             buttons=QMessageBox.Ok,
                             icon=QMessageBox.Information)
         else:
-            self.dialog_results.show_dialog(coco_res, pascal_res, self.dir_save_results)
+            self.dialog_results.show_dialog(
+                coco_res, pascal_res, self.dir_save_results)
