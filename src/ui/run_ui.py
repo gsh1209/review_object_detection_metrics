@@ -231,6 +231,18 @@ class Main_Dialog(QMainWindow, Main_UI):
         self.dialog_statistics.show_dialog(BBType.GROUND_TRUTH, gt_annotations, None,
                                            self.dir_images_gt)
 
+    def auto_set_dir(self, gt_directory):
+        # debug only
+        directory = gt_directory + '/../imgs'
+        self.txb_gt_images_dir.setText(directory)
+        self.dir_images_gt = directory
+        directory = gt_directory + '/../txts'
+        self.txb_det_dir.setText(directory)
+        self.dir_dets = directory
+        directory = gt_directory + '/../output'
+        self.txb_output_dir.setText(directory)
+        self.dir_save_results = directory
+
     def btn_gt_dir_clicked(self):
         if self.txb_gt_dir.text() == '':
             txt = self.current_directory
@@ -243,6 +255,7 @@ class Main_Dialog(QMainWindow, Main_UI):
         if os.path.isdir(directory):
             self.txb_gt_dir.setText(directory)
             self.dir_annotations_gt = directory
+            self.auto_set_dir(directory)
         else:
             self.dir_annotations_gt = None
 
@@ -421,5 +434,25 @@ class Main_Dialog(QMainWindow, Main_UI):
                             buttons=QMessageBox.Ok,
                             icon=QMessageBox.Information)
         else:
+            self.save_result_to_txt(coco_res, pascal_res, self.dir_save_results)
             self.dialog_results.show_dialog(
                 coco_res, pascal_res, self.dir_save_results)
+
+    def save_result_to_txt(self, coco_results, pascal_results, folder_results):
+        tag_value = 'VALUE'
+        text = ''
+        if len(coco_results) != 0:
+            text += 'COCO METRICS:\n'
+            for metric, res in coco_results.items():
+                text += tag_value.replace('VALUE', f'{metric}: {res}\n')
+        if len(pascal_results) != 0:
+            for metric, res in pascal_results.items():
+                if metric == 'per_class':
+                    text += 'PASCAL METRIC (AP per class)\n'
+                    for c, ap in res.items():
+                        text += tag_value.replace('VALUE', f'{c}: {ap["AP"]}\n')
+                elif metric == 'mAP':
+                    text += 'PASCAL METRIC (mAP)\n'
+                    text += tag_value.replace('VALUE', f'mAP: {res}\n')
+        with open(folder_results + '/output.txt', 'w') as f:
+            f.write(text)
